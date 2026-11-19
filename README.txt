@@ -1,8 +1,12 @@
-CHESS STUDY COACH
-1. Upload index.html, manifest.webmanifest and sw.js to an HTTPS static website host.
-2. Open the hosted page in Chrome on Android.
-3. Tap the three-dot menu and choose "Add to Home screen" or "Install app".
-4. Use FEN or PGN to load a study position, or play moves on the board.
-5. Tap Analyse position for a Stockfish recommendation.
+CHESS STUDY COACH — UPDATED ENGINE FIX
 
-This starter uses online chess.js and Stockfish resources, so an internet connection is required. If the engine does not load on your phone, tell me the error and I can package a compatible engine build. Intended for studying/reviewing positions, not live rated games.
+Upload ALL FIVE files in this folder to the root of your GitHub repository, replacing the old versions:
+- index.html
+- engine-worker.js (NEW)
+- manifest.webmanifest
+- sw.js
+- README.txt
+
+On GitHub: open your Chess- repository, choose Add file > Upload files, select these files, and commit the changes to the main branch. Wait for GitHub Pages to update, then open your site and refresh it. If the old page is cached, close the tab and reopen the site.
+
+The app is for studying positions and reviewing completed games, not for use during live rated games. Engine analysis needs an internet connection.
