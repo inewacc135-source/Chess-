@@ -14,8 +14,105 @@ $('undo').onclick=()=>{game.undo();best=null;selected=null;draw()};$('reset').on
 $('load').onclick=()=>{if(game.load($('fen').value.trim())){best=null;selected=null;$('status').textContent='Position loaded.';draw()}else $('status').textContent='Invalid FEN.'};
 $('copy').onclick=async()=>{try{await navigator.clipboard.writeText(game.fen());$('status').textContent='FEN copied.'}catch(e){$('status').textContent='Clipboard not available.'}};
 $('loadpgn').onclick=()=>{game.reset();if(game.load_pgn($('pgn').value.trim())){best=null;selected=null;$('status').textContent='PGN loaded.';draw()}else $('status').textContent='Could not read PGN.'};
-function onEngine(msg){if(msg==='uciok'){worker.postMessage('isready');return}if(msg==='readyok'){ready=true;worker.postMessage('position fen '+game.fen());worker.postMessage('go depth 13');return}if(msg.startsWith('info ')){const m=msg.match(/score (cp|mate) (-?\\d+)/);if(m)$('eval').textContent='Evaluation: '+(m[1]==='mate'?'mate in '+Math.abs(+m[2]):(+m[2]/100).toFixed(2)+' pawns')+' (side to move)';const pv=msg.match(/ pv ([a-h][1-8][a-h][1-8][qrbn]?)/);if(pv){best={from:pv[1].slice(0,2),to:pv[1].slice(2,4)};$('best').textContent='Best move: '+best.from+' → '+best.to;draw()}}if(msg.startsWith('bestmove ')){const u=msg.split(/\\s+/)[1];if(u&&u!=='(none)'){best={from:u.slice(0,2),to:u.slice(2,4)};$('best').textContent='Best move: '+best.from+' → '+best.to;$('why').textContent='The highlighted arrow shows Stockfish’s top move at the current search depth.';draw()}else $('best').textContent='No legal moves.';$('status').textContent='Analysis complete.'}}
-$('analyse').onclick=()=>{best=null;$('best').textContent='Best move: analysing…';$('why').textContent='Stockfish is searching this position.';$('status').textContent='Starting engine…';try{if(!worker){worker=new Worker('./engine-worker.js');worker.onmessage=e=>onEngine(String(e.data));worker.onerror=()=>{$('status').textContent='Engine download failed. Check your internet connection, then refresh.'};worker.postMessage('uci')}else{worker.postMessage('stop');worker.postMessage('position fen '+game.fen());worker.postMessage('go depth 13');}}catch(e){$('status').textContent='Engine could not start here. Try hosting the files over HTTPS.'}};
+let rankedMoves=[];
+let pendingSearch=false;
+function uciMove(u){
+ if(!u||u.length<4)return null;
+ return {from:u.slice(0,2),to:u.slice(2,4),promotion:u[4]||'q'};
+}
+function isLegalUci(u){
+ const m=uciMove(u);
+ return !!m && game.moves({verbose:true}).some(x=>
+  x.from===m.from && x.to===m.to && (x.promotion||'q')===m.promotion
+ );
+}
+function displayMove(u,label){
+ const m=uciMove(u);
+ if(!m)return;
+ best={from:m.from,to:m.to};
+ $('best').textContent=label+': '+m.from+' → '+m.to;
+ draw();
+}
+function startSearch(){
+ rankedMoves=[];
+ best=null;
+ $('best').textContent='Best move: analysing…';
+ $('why').textContent='Stockfish 19 is analysing this position.';
+ if(game.moves().length===0){
+  $('best').textContent=game.in_checkmate()?'Checkmate — no legal moves.':'Stalemate — no legal moves.';
+  $('why').textContent='There are no legal moves in this position, so there is no next move to suggest.';
+  $('status').textContent='Position complete.';
+  draw();
+  return;
+ }
+ worker.postMessage('position fen '+game.fen());
+ worker.postMessage('go depth 13');
+}
+function onEngine(msg){
+ if(msg==='uciok'){
+  worker.postMessage('setoption name MultiPV value 3');
+  worker.postMessage('isready');
+  return;
+ }
+ if(msg==='readyok'){
+  ready=true;
+  if(pendingSearch){pendingSearch=false;startSearch();}
+  return;
+ }
+ if(msg.startsWith('info ')){
+  const score=msg.match(/score (cp|mate) (-?\d+)/);
+  if(score)$('eval').textContent='Evaluation: '+(score[1]==='mate'?'mate in '+Math.abs(+score[2]):(+score[2]/100).toFixed(2)+' pawns')+' (side to move)';
+  const pv=msg.match(/ pv ([a-h][1-8][a-h][1-8][qrbn]?)/);
+  if(pv){
+   const rankMatch=msg.match(/multipv (\d+)/);
+   const rank=rankMatch?+rankMatch[1]:1;
+   rankedMoves[rank-1]=pv[1];
+   if(rank===1 && isLegalUci(pv[1]))displayMove(pv[1],'Best move');
+  }
+ }
+ if(msg.startsWith('bestmove ')){
+  const u=msg.trim().split(/\s+/)[1];
+  if(u && u!=='(none)' && isLegalUci(u)){
+   displayMove(u,'Best move');
+   $('why').textContent='Stockfish 19 recommends this legal move at the current search depth.';
+  }else{
+   const fallback=rankedMoves.find(isLegalUci);
+   if(fallback){
+    displayMove(fallback,'Next available engine move');
+    $('why').textContent='The top engine move was unavailable, so the next available legal engine line is shown.';
+   }else if(game.moves().length===0){
+    best=null;
+    $('best').textContent=game.in_checkmate()?'Checkmate — no legal moves.':'Stalemate — no legal moves.';
+    $('why').textContent='There are no legal moves in this position, so no move can be suggested.';
+    draw();
+   }else{
+    const fallback=game.moves({verbose:true})[0];
+    displayMove(fallback.from+fallback.to+(fallback.promotion||''),'Legal fallback');
+    $('why').textContent='The engine did not return a usable move. A legal move is shown as a fallback, but it is not necessarily the strongest.';
+   }
+  }
+  $('status').textContent='Analysis complete.';
+ }
+}
+$('analyse').onclick=()=>{
+ $('status').textContent='Starting Stockfish 19…';
+ try{
+  if(!worker){
+   worker=new Worker('./engine-worker.js');
+   worker.onmessage=e=>onEngine(String(e.data));
+   worker.onerror=()=>{
+    $('status').textContent='Engine failed to load. Check your internet connection and refresh the page.';
+   };
+   worker.postMessage('uci');
+  }else{
+   pendingSearch=true;
+   worker.postMessage('stop');
+   worker.postMessage('isready');
+  }
+ }catch(e){
+  $('status').textContent='Engine could not start. Try refreshing the website over HTTPS.';
+ }
+};
 $('board').addEventListener('dblclick',e=>e.preventDefault());draw();if('serviceWorker'in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js').catch(()=>{});
 })();
 </script></body></html>
