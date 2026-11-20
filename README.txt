@@ -1,34 +1,24 @@
-CHESS STUDY COACH — STOCKFISH 19 UPDATE
+CHESS STUDY COACH — STOCKFISH 19 FIX
 
-This version uses Stockfish.js 19.0.1, lite single-threaded browser build.
-It loads the engine in a Web Worker and fetches the matching WebAssembly file
-from the version-pinned jsDelivr package. The single-threaded build does not
-need special cross-origin isolation headers, so it is suitable for GitHub Pages.
+This version loads the Stockfish.js 19 Lite single-threaded browser build from
+direct GitHub raw file URLs, avoiding jsDelivr's npm package-size restriction.
+The matching JavaScript and WebAssembly files are pinned to the same repository
+version path. An internet connection is required the first time the engine loads.
 
-To publish:
-1. Open your GitHub repository: inewacc135-source/Chess-
-2. Upload and replace ALL FIVE files in this ZIP:
-   - index.html
-   - engine-worker.js
-   - manifest.webmanifest
-   - sw.js
-   - README.txt
+PUBLISHING
+1. Open https://github.com/inewacc135-source/Chess-
+2. Upload and replace these files from this ZIP: index.html, engine-worker.js,
+   sw.js, and README.txt. Keep manifest.webmanifest as it is.
 3. Commit the changes to the main branch.
-4. Wait for GitHub Pages to update, then close and reopen the website.
-   The service-worker cache version has been updated to refresh the page.
+4. Wait for GitHub Pages to publish, then close and reopen the website.
 
-Move handling:
-- The app checks engine suggestions against the board's legal moves.
-- It asks Stockfish for up to three ranked principal variations.
-- If the top move is unavailable, it uses the next available legal engine line.
-- If no engine line is usable but legal moves exist, it shows a legal fallback
-  and clearly labels it as not necessarily the strongest.
-- Checkmate and stalemate are reported as positions with no legal moves.
+CHANGES
+- Removed the “analysing…” placeholder from the Best move display.
+- The best move appears as soon as Stockfish reports a legal principal variation.
+- Improved the engine loading error to show the browser's error message.
+- Updated the service-worker cache version.
+- Keeps the legal-move validation and fallback handling from the previous update.
 
-The engine and its matching WebAssembly file are loaded from the pinned
-stockfish@19.0.1 CDN package, so an internet connection is required.
-Stockfish.js is distributed under GPL-3.0. See:
-https://github.com/nmrugg/stockfish.js
-
-This tool is for studying positions and reviewing completed games, not for
-assistance during live games against other people.
+Stockfish.js is GPL-3.0 software. Upstream source and licence: https://github.com/nmrugg/stockfish.js
+Engine file source: https://github.com/eple12/ClaudyWeb/tree/main/stockfish
+This is for studying positions and reviewing completed games, not live-game assistance.

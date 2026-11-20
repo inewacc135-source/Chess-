@@ -1,11 +1,4 @@
-// Stockfish.js 19 lite, single-threaded browser build.
-// Single-threaded mode works on GitHub Pages without special isolation headers.
-var Module = {
-  locateFile: function (path) {
-    if (path.endsWith('.wasm')) {
-      return 'https://cdn.jsdelivr.net/npm/stockfish@19.0.1/bin/stockfish-19-lite-single.wasm';
-    }
-    return path;
-  }
-};
-importScripts('https://cdn.jsdelivr.net/npm/stockfish@19.0.1/bin/stockfish-19-lite-single.js');
+// Stockfish.js 19 Lite, single-threaded browser build.
+// The matching WASM URL is passed in the Worker URL hash from index.html.
+// Upstream project: https://github.com/nmrugg/stockfish.js (GPL-3.0).
+importScripts('https://raw.githubusercontent.com/eple12/ClaudyWeb/main/stockfish/stockfish-19-lite-single.js');

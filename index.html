@@ -36,8 +36,8 @@ function displayMove(u,label){
 function startSearch(){
  rankedMoves=[];
  best=null;
- $('best').textContent='Best move: analysing…';
- $('why').textContent='Stockfish 19 is analysing this position.';
+ $('best').textContent='Best move: —';
+ $('why').textContent='Waiting for Stockfish to suggest a move.';
  if(game.moves().length===0){
   $('best').textContent=game.in_checkmate()?'Checkmate — no legal moves.':'Stalemate — no legal moves.';
   $('why').textContent='There are no legal moves in this position, so there is no next move to suggest.';
@@ -98,10 +98,10 @@ $('analyse').onclick=()=>{
  $('status').textContent='Starting Stockfish 19…';
  try{
   if(!worker){
-   worker=new Worker('./engine-worker.js');
+   worker=new Worker('./engine-worker.js#https%3A%2F%2Fraw.githubusercontent.com%2Feple12%2FClaudyWeb%2Fmain%2Fstockfish%2Fstockfish-19-lite-single.wasm');
    worker.onmessage=e=>onEngine(String(e.data));
-   worker.onerror=()=>{
-    $('status').textContent='Engine failed to load. Check your internet connection and refresh the page.';
+   worker.onerror=e=>{
+    $('status').textContent='Stockfish could not load: '+(e.message||'check your connection and refresh the page');
    };
    worker.postMessage('uci');
   }else{
